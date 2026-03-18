@@ -1,364 +1,228 @@
-Task: "Implement a model that predicts whether an incident will occur within the next H time steps based on the previous W steps of one or more time-series metrics. Use a sliding-window formulation and train the model using any standard machine-learning framework.
+Task: 
+"Implement a model that predicts whether an incident will occur within the next H time steps based on the previous W steps of one or more time-series metrics. Use a sliding-window formulation and train the model using any standard machine-learning framework.
 
 The applicant may use any suitable public dataset or generate a synthetic time series with labeled incident intervals (e.g. anomalies or threshold breaches). The emphasis is on correct problem formulation, model selection, training, and evaluation rather than dataset complexity or model size.
 
 The solution should include a clear description of the modeling choices, the evaluation setup (including alert thresholds and metrics), and an analysis of the results. During follow-up, the applicant should be able to explain the design decisions, discuss limitations, and outline how the approach could be adapted to a real alerting system."
 
-.
 
-📈 Logistic Classification for Stock Spike Prediction
-1. Problem Statement
-The goal of this project is to predict whether a significant price movement (“spike”) will occur in the near future, using recent historical price data.
+## Logistic Classification for Time-Series Incident Prediction
 
-We formulate this as a binary classification problem:
+## 1. Problem Statement
 
-Input: a rolling window of past returns
+The goal of this project is to predict whether an incident will occur within the next \( H \) time steps, based on the previous \( W \) steps of a time series.
 
-Output:
+We can formulate this as a **binary classification problem**:
 
-𝑦
-=
-{
-1
-if a spike occurs in the next 
-𝐻
- days
-0
-otherwise
-y={ 
-1
-0
-​
-  
-if a spike occurs in the next H days
-otherwise
-​
+- Input: a rolling window of past returns (previous \( W \) steps)  
+- Output:
+
+$$
+y =
+\begin{cases}
+1 & \text{if an incident occurs in the next } H \text{ steps} \\
+0 & \text{otherwise}
+\end{cases}
+$$
+
+In this implementation, I have chosen my time-series data to be the financial data (SPY ETF) from Yahoo Finance, and I have defined the incident to be a "spike", which is:
+
+> A price increase exceeding a threshold within the next H days.
+
+---
+
+## 2. Methods and Modelling Choices
+
+### Model: Logistic Regression
+
+I have chosen to model the probability of an incident using logistic regression:
+
+$$
+P(y=1 \mid x) = \sigma(w^T x + b)
+$$
+
+where:
+
+$$
+\sigma(z) = \frac{1}{1 + e^{-z}}
+$$
+
+
+---
+
+### Sliding Window (Feature/Inputs) Formulation
+
+We convert the time series into supervised data:
+
+$$
+x_k = [r_k, r_{k+1}, \dots, r_{k+W-1}]
+$$
+
+$$
+y_k = \mathbf{1}(\text{incident in } k+W \text{ to } k+W+H)
+$$
+
+
+---
+
+### Loss Function
+
+We minimise binary cross-entropy:
+
+$$
+\mathcal{L} = -\frac{1}{N} \sum_{i=1}^{N} \left[
+y_i \log(p_i) + (1 - y_i)\log(1 - p_i)
+\right]
+$$
+
+---
+
+### Key Hyperparameters
+
+| Hyperparameter | Description |
+|------|--------|
+|  W  | Lookback window size |
+|  H  | Prediction horizon |
+|  theta  | Incident threshold |
+|  C  | Regularisation strength |
+|  tau  | Decision threshold |
+
+---
+
+## 3. Implementation Overview
+
+### Data Pipeline
+
+1. Download data using `yfinance`  
+2. Compute daily returns  
+3. Build sliding window dataset  
+4. Generate labels using future horizon  
+5. Perform time-ordered split into training/validation/test data sets (60/20/20)
+
+---
+
+### Model Training
+
+- Standardise features (`StandardScaler`)  
+- Train logistic regression  
+- Tune hyperparameters using validation set  
+
+---
+
+### Evaluation Setup
+
+I have evaluated the results of my models using:
+
+- Accuracy  
+- Precision  
+- Recall  
+- F1-score  
+- ROC-AUC  
+
+---
+
+### Threshold ( tau )
+
+The model outputs probabilities, which are converted to alerts (incident or no incident):
+
+$$
+\hat{y} =
+\begin{cases}
+1 & \text{if } P(y=1 \mid x) \geq \tau \\
+0 & \text{otherwise}
+\end{cases}
+$$
  
-A spike is defined as a price increase exceeding a chosen threshold (e.g. +3%) within a future horizon.
-
-2. Methods and Modelling Choices
-Model: Logistic Regression
-We model the probability of a spike using logistic regression:
-
-𝑃
-(
-𝑦
-=
-1
-∣
-𝑥
-)
-=
-𝜎
-(
-𝑤
-𝑇
-𝑥
-+
-𝑏
-)
-P(y=1∣x)=σ(w 
-T
- x+b)
-where the sigmoid function is:
-
-𝜎
-(
-𝑧
-)
-=
-1
-1
-+
-𝑒
-−
-𝑧
-σ(z)= 
-1+e 
-−z
- 
-1
-​
- 
-This provides:
-
-A probabilistic interpretation
-
-A simple and interpretable baseline
-
-Fast and stable training
-
-Feature Construction (Sliding Window)
-We transform the time series into supervised data using a sliding window:
-
-For each time step 
-𝑘
-k:
-
-𝑥
-𝑘
-=
-[
-𝑟
-𝑘
-,
-𝑟
-𝑘
-+
-1
-,
-…
-,
-𝑟
-𝑘
-+
-𝑊
-−
-1
-]
-x 
-k
-​
- =[r 
-k
-​
- ,r 
-k+1
-​
- ,…,r 
-k+W−1
-​
- ]
-𝑦
-𝑘
-=
-1
-(
-spike in 
-𝑘
-+
-𝑊
- to 
-𝑘
-+
-𝑊
-+
-𝐻
-)
-y 
-k
-​
- =1(spike in k+W to k+W+H)
-This allows us to map temporal data into a standard classification framework.
-
-Loss Function (Cross-Entropy)
-The model is trained by minimising the binary cross-entropy loss:
-
-𝐿
-=
-−
-1
-𝑁
-∑
-𝑖
-=
-1
-𝑁
-[
-𝑦
-𝑖
-log
-⁡
-(
-𝑝
-𝑖
-)
-+
-(
-1
-−
-𝑦
-𝑖
-)
-log
-⁡
-(
-1
-−
-𝑝
-𝑖
-)
-]
-L=− 
-N
-1
-​
-  
-i=1
-∑
-N
-​
- [y 
-i
-​
- log(p 
-i
-​
- )+(1−y 
-i
-​
- )log(1−p 
-i
-​
- )]
-Key Hyperparameters
-Hyperparameter	Description
-𝑊
-W	Lookback window size
-𝐻
-H	Prediction horizon
-Spike threshold	Defines positive class
-𝐶
-C	Regularisation strength
-Class weights	Handle imbalance
-Important Modelling Considerations
-Class imbalance: spikes are rare → use class_weight="balanced"
-
-Feature scaling: required for stable optimisation
-
-Temporal dependence: overlapping windows introduce correlation
-
-3. Implementation Overview
-Data Pipeline
-Retrieve price data (Yahoo Finance via yfinance)
-
-Compute daily returns
-
-Construct sliding window features
-
-Generate labels based on future horizon
 
-Split data using time-based split (no shuffling)
+---
 
-Model Training
-Standardise features using StandardScaler
+### Additional Analysis
 
-Train logistic regression on training set
+- ROC Curve → discrimination ability  
+- Confusion Matrix → error breakdown  
 
-Tune hyperparameters on validation set
+---
 
-4. Evaluation and Analysis
-Metrics
-Accuracy
+## 4. Model Development and Iterations
 
-Precision
+This project was developed in three stages:
 
-Recall
+---
 
-F1-score
+### Baseline Logistic Classification  
+"Simple Logistic Classification.py"
 
-ROC-AUC
+**Setup:**
+- Fixed hyperparameters:
+  - W = 20, H = 5, theta = 3%
+- Features: raw past returns only  
+- Fixed threshold tau = 0.5
 
-ROC Curve
-We analyse model discrimination using the ROC curve:
+**Observations:**
+- Simple and interpretable  
+- Poor recall for rare events  
+- Sensitive to class imbalance  
 
-True Positive Rate (TPR) vs False Positive Rate (FPR)
+**Key Limitation:**
+- No hyperparameter tuning  
+- Limited feature representation  
 
-Helps evaluate performance across thresholds
+---
 
-Confusion Matrix
-Provides insight into:
+### Validation-Tuned Logistic Classification  
+"Validation Logistic Classification.py"
 
-False positives (over-predicting spikes)
+**Improvements:**
+- Introduced validation set  
+- Performed grid search over:
+  - W, H, theta, C
+- Tuned decision threshold tau
+- Selected model using validation ROC-AUC
 
-False negatives (missing spikes)
+**Observations:**
+- Significant improvement in generalisation  
+- Better separation between classes  
+- More stable performance  
 
-Important Insight
-Due to overlapping windows:
+**Insight:**
+- Model performance is highly sensitive to:
+  - Window size  
+  - Prediction horizon  
+  - threshold definition  
 
-Samples are not independent
+---
 
-Effective dataset size is smaller than it appears
+### Validation + Feature Engineering  
+"Validation LC with more features.py"
 
-Care must be taken to avoid data leakage
+**Additional Features:**
+- Rolling mean: 5-day and 10-day means  
+- Rolling volatility: 5-day and 10-day volatilities
+- Momentum: 20-day return  
 
-🔁 Improvements and Iterations
-1. Baseline Logistic Classification
-Used raw returns as features
+**Additional Improvement:**
+- Used `class_weight="balanced"` to handle imbalance  
 
-Fixed classification threshold (0.5)
+**Observations:**
+- Improved class separation  
+- Higher ROC-AUC  
+- More informative features  
 
-Default logistic regression
 
-Limitations:
+---
 
-Poor recall for rare spike events
+## 5. Limitations
 
-Sensitive to class imbalance
+- Assumed samples are independent (unlikely due to overlap)  
+- Linear model → cannot capture complex dynamics  
+- Labels depend on arbitrary threshold (theta)
 
-2. Validation-Tuned Logistic Classification
-Improvements:
+---
 
-Introduced validation set
+## 6. Future Improvements and Potential Methods
 
-Tuned regularisation parameter 
-𝐶
-C
+- Tree-based models (XGBoost, Random Forest)  
+- Sequential models (LSTM, Transformer)  
+- Reduce window overlap  
+- Calibrate probabilities  
 
-Adjusted classification threshold
-
-Enabled class balancing
-
-Outcome:
-
-Improved recall
-
-Better ROC-AUC
-
-More robust performance
-
-3. Logistic Classification with Extended Features
-Extended feature set to improve representation:
-
-Added Features
-Rolling mean (trend)
-
-Rolling volatility
-
-Lagged returns
-
-Momentum indicators
-
-Motivation
-Raw returns alone do not capture:
-
-Market regimes
-
-Volatility clustering
-
-Trend persistence
-
-Outcome
-Improved class separability
-
-Better predictive performance
-
-Higher ROC-AUC
-
-🚀 Future Improvements
-Non-linear models (e.g. tree-based methods)
-
-Sequential models (RNN / LSTM)
-
-Reduced window overlap
-
-Probability calibration
-
-Strategy-level backtesting
-
-⚠️ Key Takeaways
-Logistic regression is a strong and interpretable baseline
-
-Time-series classification requires careful handling of temporal structure
-
-Feature engineering is critical for performance
