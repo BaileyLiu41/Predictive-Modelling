@@ -10,7 +10,7 @@ The solution should include a clear description of the modeling choices, the eva
 
 ## 1. Problem Statement
 
-The goal of this project is to predict whether an incident will occur within the next \( H \) time steps, based on the previous \( W \) steps of a time series.
+The goal of this project is to predict whether an incident will occur within the next H time steps, based on the previous W steps of a time series.
 
 We can formulate this as a **binary classification problem**:
 
@@ -79,6 +79,8 @@ $$
 
 ### Key Hyperparameters
 
+The Hyperparameters for this model are:
+
 | Hyperparameter | Description |
 |------|--------|
 |  W  | Lookback window size |
@@ -89,29 +91,29 @@ $$
 
 ---
 
-## 3. Implementation Overview
+## 3. Overview of Model Implementation
 
-### Data Pipeline
+### Building Datasets
 
-1. Download data using `yfinance`  
-2. Compute daily returns  
-3. Build sliding window dataset  
-4. Generate labels using future horizon  
-5. Perform time-ordered split into training/validation/test data sets (60/20/20)
-
----
-
-### Model Training
-
-- Standardise features (`StandardScaler`)  
-- Train logistic regression  
-- Tune hyperparameters using validation set  
+1. Downloaded data using `yfinance`  
+2. Computed daily returns  
+3. Built sliding window dataset  
+4. Generated true labels using future horizon  
+5. Split dataset into training/validation/test data sets (60/20/20)
 
 ---
 
-### Evaluation Setup
+### Training of Model
 
-I have evaluated the results of my models using:
+- Standardised features (better convergence)
+- Trained logistic regression  
+- Tuned hyperparameters using validation set  
+
+---
+
+### Evaluating Model Results
+
+I have evaluated the results of my models using a few metrics, including:
 
 - Accuracy  
 - Precision  
@@ -123,7 +125,7 @@ I have evaluated the results of my models using:
 
 ### Threshold ( tau )
 
-The model outputs probabilities, which are converted to alerts (incident or no incident):
+The model ultimately outputed probabilities, which were then converted to binary classifications (incident or no incident) according to a threshold:
 
 $$
 \hat{y} =
