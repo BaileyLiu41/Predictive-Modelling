@@ -8,6 +8,8 @@ The solution should include a clear description of the modeling choices, the eva
 
 ## Logistic Classification for Time-Series Incident Prediction
 
+TLDR: Given a window of recent price returns, can we predict whether a spike is coming in the next few days? This project frames that as a binary classification problem and solves it with logistic regression. I iterate through three versions: a simple baseline, one with proper validation and hyperparameter tuning, and a final version with added features (rolling mean, volatility, momentum). Each version improves on the last. The framework is intentionally general, and you can easily swap out price data for CPU usage or API latency and the same approach applies.
+
 ## 1. Problem Statement
 
 The goal of this project is to predict whether an incident will occur within the next H time steps, based on the previous W steps of a time series.
